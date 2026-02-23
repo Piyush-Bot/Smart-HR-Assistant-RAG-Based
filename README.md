@@ -1,3 +1,11 @@
+Steps to run
+Create Virtual Environment :python -m venv venv
+Activate: venv\Scripts\activate
+Install Dependencies: pip install -r requirements.txt
+run python ingest.py
+run python main.py
+enter query
+
 # Smart-HR-Assistant-RAG-Based
 Project Overview  The Smart HR Assistant is a Retrieval-Augmented Generation (RAG) powered AI system designed to automate repetitive HR policy inquiries and provide employees with instant, policy-accurate responses.
 
@@ -49,3 +57,12 @@ License Type     Open-Source LLM (Fine-tuned Llama 3)      Ensures full data pri
 Deployment       Hybrid (On-Prem & Cloud)                  Maintains complete control over sensitive HR data.
 Temperature      0.2                                       Ensures factually accurate responses.
 Top-K Sampling   50                                        Optimizes relevance, prevents hallucinations.
+
+// Queries //
+How many annual leave days are allowed?
+How many sick leave days are allowed?
+Is unused leave carried forward?
+Does sick leave require a medical certificate?
+
+
+
