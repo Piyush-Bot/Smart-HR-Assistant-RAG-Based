@@ -1,0 +1,31 @@
+Suggestions:
+Option A – Paragraph/section chunking: Split on double newlines (or “\n\n”) first, then merge small paragraphs up to a max size (e.g. 400–600 chars) and keep overlap. That way the real title block often stays in one chunk.
+Option B – Sentence-aware chunking: Split on sentence boundaries (e.g. with a simple regex or nltk), then form chunks of N sentences with 1–2 sentence overlap. Reduces cutting mid-sentence.
+Option C – Smaller chunks for “header”: For the first 1–2 KB of each document, use smaller chunks (e.g. 200–300 chars) or one chunk per line/paragraph so “title” and “publisher” are in separate chunks; use larger chunks for the rest.
+
+Combining A + C (paragraph/section split + smaller chunks at the start) usually helps for “title of the book” type questions.
+
+
+Changes in ingest.py
+1. _chunk_header(header_text, max_chunk_size=300)
+Used for the first 2000 characters of each document.
+Splits on double newline (paragraphs).
+If a paragraph is ≤ 300 chars, it becomes one chunk.
+If longer, splits by single newline and groups lines into chunks of up to 300 chars.
+So the real title (e.g. "A STORM OF SWORDS") can sit in its own small chunk instead of being mixed with "A Bantam Spectra Book" and "PUBLISHING HISTORY".
+
+2._chunk_by_paragraphs(text, chunk_size=550, overlap_chars=120)
+Used for the rest of the document.
+Splits on double newline to get paragraphs, then merges consecutive paragraphs until size ≈ 550 chars.
+Uses a one-paragraph overlap between consecutive chunks so context at boundaries is preserved.
+
+3. chunk_text(...)
+Header: first 2000 chars → header chunks (max 300 chars each).
+Body: remainder → paragraph-aware chunks (~550 chars, paragraph overlap).
+Short documents (≤ 2000 chars) are chunked only with the paragraph-aware logic.
+
+
+Parameters need to tune
+header_size=2000 — length of “start of doc” treated as header.
+header_max_chunk=300 — max size of a header chunk (title/author stay small).
+body_chunk_size=550, body_overlap=120 — body chunk size and overlap (overlap is applied as one paragraph).

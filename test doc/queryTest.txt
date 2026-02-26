@@ -1,0 +1,75 @@
+//test 1
+
+q. What is the title of the book in the document?  35 Sec.
+a. The title of the book mentioned in the context is likely "Dragonwatch," a modern fantasy series, but this is speculative based on the provided information.
+
+output Wrong
+it shows a hallucination + retrieval failure.
+
+File	Change
+ -- ingest.py	Chunking now uses 600 chars with 150 char overlap so phrases like title + author are less likely to be split. 
+Each chunk gets metadata source (filename) for future use. On each run, existing chunks are cleared so re-ingest uses the new chunking.
+ -- retriever.py	k increased from 3 to 6 so there’s a better chance the chunk with the book title is included.
+ -- api.py	Prompt tightened: “Answer ONLY using the given context” and “If the answer is not clearly stated in the context,
+                                reply with: Not found in the provided context.” to reduce hallucination.
+
+
+// Test 2
+q. What is the title of the book in the document?  40 Sec.
+a. Samwell Tarly's quote about the sword is titled "The Sword in the Dark."
+
+output Wrong
+(no hallucination like “Dragonwatch”), but the answer is still wrong because retrieval is still missing the correct chunk.
+
+Changes made
+metadatas=[{"source": file, "chunk_index": i}],
+ ingest.py – Each chunk’s metadata now includes chunk_index so we can identify the first chunk per document.
+retriever.py – New helper _get_first_chunks_per_document() fetches the first chunk (by chunk_index) per source; 
+those are prepended to the vector-search results before building the final context string.
+
+// Test 3
+q. What is the title of the book in the document?  47 Sec.
+a. The title of the book is **A Bantam Spectra Book**.
+
+output Wrong
+But the first chunk likely contains multiple lines, for example:  
+
+A Storm of Swords
+George R. R. Martin
+A Bantam Spectra Book
+November 2000
+
+When the LLM sees this, it sometimes misinterprets the publisher line as the title.
+So the problem is now not retrieval, but context structure.
+
+Changes made.
+switched to SentenceTransformer("all-mpnet-base-v2") # 768 dimensions
+Chunking: We switched from paragraph/sentence-based chunking (many small header chunks + paragraph-merge for the body) 
+to a simple rule: first 500 chars = one chunk (title block),
+rest = 600 chars with 150 overlap (sliding window), so there are fewer chunks and ingest is much faster.
+
+//test 4 //
+q.Who wrote A Storm of Swords?
+a.Answer: George R. R. Martin wrote "A Storm of Swords." Answer: George R. R. Martin
+
+output correct but got tiwice
+
+drop a leading Answer: if the model’s reply starts with it. We then run a regex that finds any trailing “. Answer: …” or “ Answer: …” at the end of the reply
+ and remove it so only the main answer is left.
+
+
+
+//test 5 //
+q.When was the Bantam Spectra hardcover edition of the book published?  14S
+A.The Bantam Spectra hardcover edition of George R. R. Martin's "The StORM OF SWORDS" was published in November 2000. Answer: November 2000
+
+output correct
+
+//test 6 //
+q. Which character appears in the prologue of A Storm of Swords?
+Answer: Melisandre appears in the prologue of "A Storm of Swords."
+
+output Wrong
+Why RAG Produced This Error
+This is a classic multi-document retrieval error.
+You likely ingested multiple documents and the retriever returned a chunk mentioning Melisandre from another section or document.
